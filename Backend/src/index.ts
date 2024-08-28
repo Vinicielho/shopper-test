@@ -1,8 +1,6 @@
 import Fastify from "fastify";
-import { Client } from "pg";
 
 const fastify = Fastify({ logger: true });
-const client = new Client({ connectionString: process.env.DATABASE_URL });
 
 const host =
   process.env.BACKEND_HOST ||

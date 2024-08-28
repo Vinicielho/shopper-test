@@ -8,5 +8,6 @@ COPY src ./src
 RUN npm install
 RUN npm run build
 
+# TODO: this should be referencing the port defined in docker-compose, no?
 EXPOSE 3000
 CMD ["npm", "start"]
