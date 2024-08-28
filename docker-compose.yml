@@ -1,0 +1,28 @@
+services:
+  db:
+    image: postgres:14
+    environment:
+      POSTGRES_USER: billingApplication
+      POSTGRES_PASSWORD: BillingAppPassword
+      POSTGRES_DB: bills
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "3456:3456"
+
+  backend:
+    build:
+      context: ./Backend
+      dockerfile: Dockerfile
+    ports:
+      - "6543:6543"
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: postgresql://user:password@db:5432/mydatabase
+      BACKEND_HOST: 0.0.0.0
+      BACKEND_PORT: 5150
+      # GEMINI_API_KEY: ${GEMINI_API_KEY}
+
+volumes:
+  postgres_data:

@@ -13,10 +13,12 @@
   "description": "",
   "devDependencies": {
     "@types/node": "^22.5.1",
+    "@types/pg": "^8.11.7",
     "ts-node": "^10.9.2",
     "typescript": "^5.5.4"
   },
   "dependencies": {
-    "fastify": "^4.28.1"
+    "fastify": "^4.28.1",
+    "pg": "^8.12.0"
   }
 }
