@@ -19,11 +19,9 @@ services:
     depends_on:
       - db
     environment:
-    #TODO: Why ist this using the values mentioned up there to build this properly? This is redudancy!
-      DATABASE_URL: postgresql://billingApplication:BillingAppPassword@db:5432/bills
+      DATABASE_URL: postgresql://billingApplication:billingAppPassword@db:5432/billsDatabase
       BACKEND_HOST: 0.0.0.0
       BACKEND_PORT: 5150
-      
 
 volumes:
   postgres_data:
