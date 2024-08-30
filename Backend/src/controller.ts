@@ -1,15 +1,11 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { GoogleAIFileManager } from "@google/generative-ai/server";
 import { v4 as uuidv4 } from "uuid";
-import { Bill, UploadRequest } from "./models";
+import { Bill, ConfirmRequest, UploadRequest } from "./models";
 import * as db from "./db";
 
 const genAI = new GoogleGenerativeAI(process.env.API_KEY!);
 const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-const fileManager = new GoogleAIFileManager(process.env.API_KEY!);
-
-// TODO: PAY ATTENTION TO THE ERROR THROWING!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!11
 
 export async function askGemini(
   request: FastifyRequest<{ Body: UploadRequest }>,
@@ -19,24 +15,27 @@ export async function askGemini(
     const { image, customer_code, measure_datetime, measure_type } =
       request.body;
 
-    // const mimeSignatures: { [key: string]: string } = {
-    //   iVBORw0KGgo: "image/png",
-    //   "/9j/": "image/jpeg",
-    //   UklGR: "image/webp",
-    //   AAAAIGZ0eXB: "image/heic",
-    // };
-    // const imageSignature = image.split(",")[1].substring(0, 15);
-    // const imageMimeType = Object.entries(mimeSignatures).find(([signature]) =>
-    //   imageSignature.startsWith(signature)
-    // )?.[1];
+    const mimeSignatures = new Map<string, string>([
+      ["iVBORw0KGgo", "image/png"],
+      ["/9j/", "image/jpeg"],
+      ["UklGR", "image/webp"],
+      ["AAAAIGZ0eXB", "image/heic"],
+    ]);
+    const base64Data = (
+      image.startsWith("data:image/") ? image.split(",")[1] : image
+    ).trim();
+    const imageSignature = base64Data.substring(0, 15);
+    const imageMimeType = [...mimeSignatures].find(([signature]) =>
+      imageSignature.startsWith(signature)
+    )?.[1];
 
-    // if (!imageMimeType) {
-    //   return reply.status(400).send({
-    //     error_code: "INVALID_DATA",
-    //     error_description:
-    //       "Image must be a Base64-encoded PNG, JPEG, WEBP, or HEIC/HEIF!",
-    //   });
-    // }
+    if (!imageMimeType) {
+      return reply.status(400).send({
+        error_code: "INVALID_DATA",
+        error_description:
+          "Image must be a base64-encoded PNG, JPEG, WEBP, or HEIC/HEIF!",
+      });
+    }
 
     const existingBill = await db.getBillByCustomerAndMonth(
       customer_code,
@@ -50,41 +49,36 @@ export async function askGemini(
       });
     }
 
-    // const result = await model.generateContent([
-    //   //`What value is being registered for the ${measure_type} meter?`,
-    //   "what is this?",
-    //   {
-    //     inlineData: {
-    //       data: image,
-    //       mimeType: "image/jpeg", //temporary, it should be the const imageMimeType
-    //     },
-    //   },
-    // ]);
-
-    const result = await model.generateContent([
-      `What value is being registered for the ${measure_type} meter? in this image: ${image}`,
+    const geminiResponse = await model.generateContent([
+      `tell me the value being registered in the ${measure_type} meter? Numbers only!`,
       {
         inlineData: {
-          data: image,
-          mimeType: "image/jpeg", // Replace with actual mimeType if using validation
+          data: base64Data,
+          mimeType: imageMimeType,
         },
       },
     ]);
-    console.log(result);
 
-    const measureValue = parseFloat(result.response.text().trim());
+    const measureValue = parseFloat(geminiResponse.response.text().trim());
+    if (isNaN(measureValue)) {
+      throw new Error("Failed to parse measure value from Gemini response.");
+    }
+
     const measureUUID = uuidv4();
-
     const newBill: Bill = {
       id: measureUUID,
       customer_code,
       measure_type,
       measure_value: measureValue,
       measure_datetime,
-      image_url: `http://example.com/images/${measureUUID}.png`, // How to deal with this temporary image thing? do we addthe image itself to the db, and make the link itself temporary? or do we cache it for a while in the backend aplication itself and then get rid of it i am for the last option?  And again, it melds into the other question about the image
+      image_url: `http://example.com/images/${measureUUID}.png`,
     };
-
-    await db.insertBill(newBill);
+    try {
+      await db.insertBill(newBill);
+    } catch (dbError) {
+      console.error("Database insert error", dbError);
+      throw new Error("Failed to insert bill into the database");
+    }
 
     reply.send({
       image_url: newBill.image_url,
@@ -100,6 +94,84 @@ export async function askGemini(
   }
 }
 
+export async function confirmBill(
+  request: FastifyRequest<{ Body: ConfirmRequest }>,
+  reply: FastifyReply
+) {
+  try {
+    const { measure_uuid, confirmed_value } = request.body;
+
+    if (typeof measure_uuid !== "string" || typeof confirmed_value !== "number") {
+      return reply.status(400).send({
+        error_code: "INVALID_DATA",
+        error_description: "Invalid measure id or confirmed value",
+      });
+    }
+
+    const bill = await db.getBillById(measure_uuid);
+    if (!bill) {
+      return reply.status(404).send({
+        error_code: "MEASURE_NOT_FOUND",
+        error_description: "Reading not found",
+      });
+    }
+
+    if (bill.confirmed_value !== undefined) {
+      return reply.status(409).send({
+        error_code: "CONFIRMATION_DUPLICATE",
+        error_description: "Leitura do mês já realizada",
+      });
+    }
+
+    await db.updateBillConfirmation(measure_uuid, confirmed_value);
+
+    reply.send({ success: true });
+  } catch (error) {
+    reply.status(500).send({
+      error: "Failed to confirm reading",
+      details: error instanceof Error ? error.message : "An unknown error occurred",
+    });
+  }
+}
+
+export async function listMeasures(
+  request: FastifyRequest<{ Params: { customer_code: string }; Querystring: { measure_type?: string } }>,
+  reply: FastifyReply
+) {
+  try {
+    const { customer_code } = request.params;
+    const { measure_type } = request.query;
+
+    if (measure_type && !["WATER", "GAS"].includes(measure_type.toUpperCase())) {
+      return reply.status(400).send({
+        error_code: "INVALID_TYPE",
+        error_description: "Tipo de medição não permitida",
+      });
+    }
+
+    const measures = await db.getBillsByCustomer(customer_code, measure_type as "WATER" | "GAS");
+
+    if (measures.length === 0) {
+      return reply.status(404).send({
+        error_code: "MEASURES_NOT_FOUND",
+        error_description: "Nenhuma leitura encontrada",
+      });
+    }
+
+    reply.send({
+      customer_code,
+      measures,
+    });
+  } catch (error) {
+    reply.status(500).send({
+      error: "Failed to list measures",
+      details: error instanceof Error ? error.message : "An unknown error occurred",
+    });
+  }
+}
+
+
+// test methods
 // export async function addBill(
 //   request: FastifyRequest<{ Body: Bill }>,
 //   reply: FastifyReply

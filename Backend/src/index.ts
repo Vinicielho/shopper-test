@@ -24,10 +24,14 @@ fastify.listen({ host, port }, (err) => {
   }
 });
 
-fastify.get("/", () => {
-  return "hi, I'm here!";
-});
 fastify.post("/upload", billController.askGemini);
+fastify.patch("/confirm", billController.confirmBill);
+fastify.get("/:customer_code/list", billController.listMeasures);
+
+//test endpoints:
+// fastify.get("/", () => {
+//   return "hi, I'm here!";
+// });
 // fastify.post("/bills", billController.addBill);
 // fastify.get("/bills", billController.getBills);
 // fastify.delete("/bills/:id", billController.removeBill);

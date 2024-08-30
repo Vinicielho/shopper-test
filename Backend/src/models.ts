@@ -1,4 +1,3 @@
-// do not let any of this be null
 export interface UploadRequest {
   image: string;
   customer_code: string;
@@ -13,4 +12,11 @@ export interface Bill {
   measure_value: number;
   measure_datetime: string;
   image_url: string;
+  confirmed_value?: number;
+  confirmed_at?: string;
+}
+
+export interface ConfirmRequest {
+  measure_uuid: string;
+  confirmed_value: number;
 }

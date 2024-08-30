@@ -1,10 +1,10 @@
 CREATE TABLE IF NOT EXISTS readings (
-    measure_uuid UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     customer_code VARCHAR(255) NOT NULL,
     measure_type VARCHAR(50) CHECK (measure_type IN ('WATER', 'GAS')) NOT NULL,
-    measure_value INTEGER NOT NULL,
+    measure_value NUMERIC NOT NULL,
     measure_datetime TIMESTAMP NOT NULL,
-    confirmed_value INTEGER,
-    confirmed_at TIMESTAMP,
-    image_url TEXT
+    image_url TEXT,
+    confirmed_value NUMERIC,
+    confirmed_at TIMESTAMP
 );
