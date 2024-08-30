@@ -10,29 +10,20 @@ client
   .catch((err) => console.error("Database connection error", err.stack));
 
 export async function insertBill(bill: Bill) {
-  const {
-    customer_code,
-    measure_type,
-    measure_value,
-    measure_datetime,
-    confirmed_value,
-    confirmed_at,
-    image_url,
-  } = bill;
+  const { id, customer_code, measure_type, measure_value, measure_datetime } =
+    bill;
 
   const query = `
-    INSERT INTO readings (customer_code, measure_type, measure_value, measure_datetime, confirmed_value, confirmed_at, image_url)
-    VALUES ($1, $2, $3, $4, $5, $6, $7)
+    INSERT INTO readings (id, customer_code, measure_type, measure_value, measure_datetime, image_url)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
   `;
 
   const values = [
+    id,
     customer_code,
     measure_type,
     measure_value,
     measure_datetime,
-    confirmed_value,
-    confirmed_at,
-    image_url,
   ];
 
   try {
@@ -43,12 +34,51 @@ export async function insertBill(bill: Bill) {
   }
 }
 
-export async function getAllBills() {
+export async function deleteBill(billId: string): Promise<void> {
+  const query = "DELETE FROM readings WHERE id = $1";
   try {
-    const result = await client.query("SELECT * FROM readings");
-    return result.rows;
-  } catch (error) {
-    console.error("Failed to fetch bills", error);
-    throw new Error("Failed to fetch bills");
+    const result = await client.query(query, [billId]);
+    if (result.rowCount === 0) {
+      throw new Error("No bill found with the provided ID");
+    }
+  } catch (err) {
+    console.error("Database query error", err);
+    throw err;
+  }
+}
+
+export async function getAllBills(): Promise<Bill[]> {
+  const query = "SELECT * FROM readings";
+  try {
+    const result = await client.query(query);
+    return result.rows as Bill[];
+  } catch (err) {
+    console.error("Database query error", err);
+    throw err;
+  }
+}
+
+export async function getBillByCustomerAndMonth(
+  customer_code: string,
+  measure_type: "WATER" | "GAS",
+  month: number
+): Promise<Bill | null> {
+  const query = `
+    SELECT * FROM readings
+    WHERE customer_code = $1
+      AND measure_type = $2
+      AND EXTRACT(MONTH FROM measure_datetime::date) = $3
+  `;
+
+  try {
+    const result = await client.query(query, [
+      customer_code,
+      measure_type,
+      month,
+    ]);
+    return result.rows[0] || null;
+  } catch (err) {
+    console.error("Database query error", err);
+    throw err;
   }
 }

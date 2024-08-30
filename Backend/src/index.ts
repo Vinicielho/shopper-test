@@ -1,5 +1,4 @@
 import Fastify from "fastify";
-const fastify = Fastify({ logger: true });
 import * as billController from "./controller";
 
 const host =
@@ -16,6 +15,8 @@ const port = parseInt(
   10
 );
 
+const fastify = Fastify({ logger: true });
+
 fastify.listen({ host, port }, (err) => {
   if (err) {
     fastify.log.error(err);
@@ -23,10 +24,10 @@ fastify.listen({ host, port }, (err) => {
   }
 });
 
-fastify.get("/", async () => {
+fastify.get("/", () => {
   return "hi, I'm here!";
 });
-
-fastify.post("/bills", billController.addBill);
-
-fastify.get("/bills", billController.getBills);
+fastify.post("/upload", billController.askGemini);
+// fastify.post("/bills", billController.addBill);
+// fastify.get("/bills", billController.getBills);
+// fastify.delete("/bills/:id", billController.removeBill);
