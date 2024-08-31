@@ -1,5 +1,5 @@
-CREATE TABLE IF NOT EXISTS readings (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+CREATE TABLE readings (
+    id UUID PRIMARY KEY DEFAULT,
     customer_code VARCHAR(255) NOT NULL,
     measure_type VARCHAR(50) CHECK (measure_type IN ('WATER', 'GAS')) NOT NULL,
     measure_value NUMERIC NOT NULL,

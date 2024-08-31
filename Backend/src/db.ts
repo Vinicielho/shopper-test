@@ -1,9 +1,13 @@
-import { Pool } from "pg";
+import { Client } from "pg";
 import { Bill } from "./models";
 
-const pool = new Pool({
+const client = new Client({
   connectionString: process.env.DATABASE_URL,
 });
+
+client
+  .connect()
+  .catch((err) => console.error("Database connection error", err.stack));
 
 export async function insertBill(bill: Bill) {
   const {
@@ -30,7 +34,7 @@ export async function insertBill(bill: Bill) {
   ];
 
   try {
-    await pool.query(query, values);
+    await client.query(query, values);
   } catch (err) {
     console.error("Database query error", err);
     throw err;
@@ -50,7 +54,7 @@ export async function getBillByCustomerAndMonth(
   `;
 
   try {
-    const result = await pool.query(query, [
+    const result = await client.query(query, [
       customer_code,
       measure_type,
       month,
@@ -63,20 +67,31 @@ export async function getBillByCustomerAndMonth(
 }
 
 export async function getBillById(id: string): Promise<Bill | null> {
-  const result = await pool.query("SELECT * FROM readings WHERE id = $1", [id]);
-  return result.rows.length ? (result.rows[0] as Bill) : null;
+  const query = "SELECT * FROM readings WHERE id = $1";
+
+  try {
+    const result = await client.query(query, [id]);
+    return result.rows.length ? (result.rows[0] as Bill) : null;
+  } catch (err) {
+    console.error("Database query error", err);
+    throw err;
+  }
 }
 
 export async function updateBillConfirmation(
   id: string,
   confirmed_value: number
 ): Promise<void> {
-  await pool.query(
-    "UPDATE readings SET confirmed_value = $1, confirmed_at = NOW() WHERE id = $2",
-    [confirmed_value, id]
-  );
-}
+  const query =
+    "UPDATE readings SET confirmed_value = $1, confirmed_at = NOW() WHERE id = $2";
 
+  try {
+    await client.query(query, [confirmed_value, id]);
+  } catch (err) {
+    console.error("Database query error", err);
+    throw err;
+  }
+}
 
 export async function getBillsByCustomer(
   customer_code: string,
@@ -100,7 +115,7 @@ export async function getBillsByCustomer(
       values.push(measure_type);
     }
 
-    const result = await pool.query(query, values);
+    const result = await client.query(query, values);
 
     return result.rows;
   } catch (error) {
@@ -109,8 +124,7 @@ export async function getBillsByCustomer(
   }
 }
 
-
-//Test methods:
+// Uncomment and update these methods if needed:
 // export async function deleteBill(billId: string): Promise<void> {
 //   const query = "DELETE FROM readings WHERE id = $1";
 //   try {
