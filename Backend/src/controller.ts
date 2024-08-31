@@ -99,16 +99,16 @@ export async function confirmBill(
   reply: FastifyReply
 ) {
   try {
-    const { measure_uuid, confirmed_value } = request.body;
+    const { id, confirmed_value } = request.body;
 
-    if (typeof measure_uuid !== "string" || typeof confirmed_value !== "number") {
+    if (typeof id !== "string" || typeof confirmed_value !== "number") {
       return reply.status(400).send({
         error_code: "INVALID_DATA",
         error_description: "Invalid measure id or confirmed value",
       });
     }
 
-    const bill = await db.getBillById(measure_uuid);
+    const bill = await db.getBillById(id);
     if (!bill) {
       return reply.status(404).send({
         error_code: "MEASURE_NOT_FOUND",
@@ -123,16 +123,18 @@ export async function confirmBill(
       });
     }
 
-    await db.updateBillConfirmation(measure_uuid, confirmed_value);
+    await db.updateBillConfirmation(id, confirmed_value);
 
     reply.send({ success: true });
   } catch (error) {
     reply.status(500).send({
       error: "Failed to confirm reading",
-      details: error instanceof Error ? error.message : "An unknown error occurred",
+      details:
+        error instanceof Error ? error.message : "An unknown error occurred",
     });
   }
 }
+
 
 export async function listMeasures(
   request: FastifyRequest<{

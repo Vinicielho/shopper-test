@@ -62,23 +62,21 @@ export async function getBillByCustomerAndMonth(
   }
 }
 
-export async function getBillById(measure_uuid: string): Promise<Bill | null> {
-  const result = await pool.query(
-    "SELECT * FROM readings WHERE measure_uuid = $1",
-    [measure_uuid]
-  );
+export async function getBillById(id: string): Promise<Bill | null> {
+  const result = await pool.query("SELECT * FROM readings WHERE id = $1", [id]);
   return result.rows.length ? (result.rows[0] as Bill) : null;
 }
 
 export async function updateBillConfirmation(
-  measure_uuid: string,
+  id: string,
   confirmed_value: number
 ): Promise<void> {
   await pool.query(
     "UPDATE readings SET confirmed_value = $1, confirmed_at = NOW() WHERE id = $2",
-    [confirmed_value, measure_uuid]
+    [confirmed_value, id]
   );
 }
+
 
 export async function getBillsByCustomer(
   customer_code: string,

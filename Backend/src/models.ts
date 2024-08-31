@@ -17,6 +17,6 @@ export interface Bill {
 }
 
 export interface ConfirmRequest {
-  measure_uuid: string;
+  id: string;
   confirmed_value: number;
 }
