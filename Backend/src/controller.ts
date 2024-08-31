@@ -135,21 +135,30 @@ export async function confirmBill(
 }
 
 export async function listMeasures(
-  request: FastifyRequest<{ Params: { customer_code: string }; Querystring: { measure_type?: string } }>,
+  request: FastifyRequest<{
+    Params: { customer_code: string };
+    Querystring: { measure_type?: string };
+  }>,
   reply: FastifyReply
 ) {
   try {
     const { customer_code } = request.params;
     const { measure_type } = request.query;
 
-    if (measure_type && !["WATER", "GAS"].includes(measure_type.toUpperCase())) {
+    if (
+      measure_type &&
+      !["WATER", "GAS"].includes(measure_type.toUpperCase())
+    ) {
       return reply.status(400).send({
         error_code: "INVALID_TYPE",
         error_description: "Tipo de medição não permitida",
       });
     }
 
-    const measures = await db.getBillsByCustomer(customer_code, measure_type as "WATER" | "GAS");
+    const measures = await db.getBillsByCustomer(
+      customer_code,
+      measure_type as "WATER" | "GAS"
+    );
 
     if (measures.length === 0) {
       return reply.status(404).send({
@@ -165,10 +174,12 @@ export async function listMeasures(
   } catch (error) {
     reply.status(500).send({
       error: "Failed to list measures",
-      details: error instanceof Error ? error.message : "An unknown error occurred",
+      details:
+        error instanceof Error ? error.message : "An unknown error occurred",
     });
   }
 }
+
 
 
 // test methods

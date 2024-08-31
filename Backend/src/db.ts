@@ -83,38 +83,34 @@ export async function updateBillConfirmation(
 export async function getBillsByCustomer(
   customer_code: string,
   measure_type?: "WATER" | "GAS"
-): Promise<Bill[]> {
-  let query = `
-    SELECT id AS measure_uuid, customer_code, measure_type, measure_value, 
-           measure_datetime, image_url,
-           confirmed_value IS NOT NULL AS has_confirmed
-    FROM readings
-    WHERE customer_code = $1
-  `;
-  const queryParams: any[] = [customer_code];
-
-  if (measure_type) {
-    query += ` AND measure_type ILIKE $2`;
-    queryParams.push(measure_type.toUpperCase());
-  }
-
+): Promise<
+  Array<{
+    id: string;
+    customer_code: string;
+    measure_type: string;
+    measure_value: number;
+    measure_datetime: string;
+    image_url: string;
+  }>
+> {
   try {
-    const result = await pool.query(query, queryParams);
-    return result.rows.map((row: any) => ({
-      id: row.measure_uuid,
-      customer_code: row.customer_code,
-      measure_type: row.measure_type,
-      measure_value: row.measure_value,
-      measure_datetime: row.measure_datetime,
-      image_url: row.image_url,
-      confirmed_value: row.confirmed_value,
-      confirmed_at: row.confirmed_at,
-    }));
-  } catch (err) {
-    console.error("Database query error", err);
-    throw err;
+    let query = `SELECT id, customer_code, measure_type, measure_value, measure_datetime, image_url FROM readings WHERE customer_code = $1`;
+    const values = [customer_code];
+
+    if (measure_type) {
+      query += " AND measure_type = $2";
+      values.push(measure_type);
+    }
+
+    const result = await pool.query(query, values);
+
+    return result.rows;
+  } catch (error) {
+    console.error("Error querying bills by customer:", error);
+    throw error;
   }
 }
+
 
 //Test methods:
 // export async function deleteBill(billId: string): Promise<void> {
