@@ -6,7 +6,7 @@ export interface UploadRequest {
 }
 
 export interface Bill {
-  id: string;
+  measure_uuid: string;
   customer_code: string;
   measure_type: "WATER" | "GAS";
   measure_value: number;
@@ -17,6 +17,6 @@ export interface Bill {
 }
 
 export interface ConfirmRequest {
-  id: string;
+  measure_uuid: string;
   confirmed_value: number;
 }

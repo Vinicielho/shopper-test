@@ -11,7 +11,7 @@ client
 
 export async function insertBill(bill: Bill) {
   const {
-    id,
+    measure_uuid,
     customer_code,
     measure_type,
     measure_value,
@@ -20,12 +20,12 @@ export async function insertBill(bill: Bill) {
   } = bill;
 
   const query = `
-      INSERT INTO readings (id, customer_code, measure_type, measure_value, measure_datetime, image_url)
+      INSERT INTO readings (measure_uuid, customer_code, measure_type, measure_value, measure_datetime, image_url)
       VALUES ($1, $2, $3, $4, $5, $6)
     `;
 
   const values = [
-    id,
+    measure_uuid,
     customer_code,
     measure_type,
     measure_value,
@@ -66,11 +66,10 @@ export async function getBillByCustomerAndMonth(
   }
 }
 
-export async function getBillById(id: string): Promise<Bill | null> {
-  const query = "SELECT * FROM readings WHERE id = $1";
-
+export async function getBillById(measure_uuid: string): Promise<Bill | null> {
+  const query = "SELECT * FROM readings WHERE measure_uuid = $1";
   try {
-    const result = await client.query(query, [id]);
+    const result = await client.query(query, [measure_uuid]);
     return result.rows.length ? (result.rows[0] as Bill) : null;
   } catch (err) {
     console.error("Database query error", err);
@@ -79,14 +78,14 @@ export async function getBillById(id: string): Promise<Bill | null> {
 }
 
 export async function updateBillConfirmation(
-  id: string,
+  measure_uuid: string,
   confirmed_value: number
 ): Promise<void> {
   const query =
-    "UPDATE readings SET confirmed_value = $1, confirmed_at = NOW() WHERE id = $2";
+    "UPDATE readings SET confirmed_value = $1, confirmed_at = NOW() WHERE measure_uuid = $2";
 
   try {
-    await client.query(query, [confirmed_value, id]);
+    await client.query(query, [confirmed_value, measure_uuid]);
   } catch (err) {
     console.error("Database query error", err);
     throw err;
@@ -98,7 +97,7 @@ export async function getBillsByCustomer(
   measure_type?: "WATER" | "GAS"
 ): Promise<
   Array<{
-    id: string;
+    measure_uuid: string;
     customer_code: string;
     measure_type: string;
     measure_value: number;
@@ -107,7 +106,7 @@ export async function getBillsByCustomer(
   }>
 > {
   try {
-    let query = `SELECT id, customer_code, measure_type, measure_value, measure_datetime, image_url FROM readings WHERE customer_code = $1`;
+    let query = `SELECT measure_uuid, customer_code, measure_type, measure_value, measure_datetime, image_url FROM readings WHERE customer_code = $1`;
     const values = [customer_code];
 
     if (measure_type) {

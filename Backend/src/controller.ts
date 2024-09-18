@@ -66,7 +66,7 @@ export async function askGemini(
 
     const measureUUID = uuidv4();
     const newBill: Bill = {
-      id: measureUUID,
+      measure_uuid: measureUUID,
       customer_code,
       measure_type,
       measure_value: measureValue,
@@ -99,16 +99,19 @@ export async function confirmBill(
   reply: FastifyReply
 ) {
   try {
-    const { id, confirmed_value } = request.body;
+    const { measure_uuid, confirmed_value } = request.body;
 
-    if (typeof id !== "string" || typeof confirmed_value !== "number") {
+    if (
+      typeof measure_uuid !== "string" ||
+      typeof confirmed_value !== "number"
+    ) {
       return reply.status(400).send({
         error_code: "INVALID_DATA",
         error_description: "Invalid measure id or confirmed value",
       });
     }
 
-    const bill = await db.getBillById(id);
+    const bill = await db.getBillById(measure_uuid);
     if (!bill) {
       return reply.status(404).send({
         error_code: "MEASURE_NOT_FOUND",
@@ -123,7 +126,7 @@ export async function confirmBill(
       });
     }
 
-    await db.updateBillConfirmation(id, confirmed_value);
+    await db.updateBillConfirmation(measure_uuid, confirmed_value);
 
     reply.send({ success: true });
   } catch (error) {
@@ -134,7 +137,6 @@ export async function confirmBill(
     });
   }
 }
-
 
 export async function listMeasures(
   request: FastifyRequest<{
@@ -181,8 +183,6 @@ export async function listMeasures(
     });
   }
 }
-
-
 
 // test methods
 // export async function addBill(
